@@ -25,7 +25,3 @@
     border-color: var(--color-gray-200, currentcolor);
   }
 }
-
-.btn-primary {
-  @apply text-white;
-}
