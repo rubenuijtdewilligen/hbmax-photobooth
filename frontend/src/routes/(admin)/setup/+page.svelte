@@ -14,6 +14,15 @@
 
   let selectedIndex = $state(0);
 
+  let showKeyboard = $state(false);
+
+  const keyboardRows = [
+    ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-'],
+    ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+    ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L', '&'],
+    ['Z', 'X', 'C', 'V', 'B', 'N', 'M', ',', '.', ' ']
+  ];
+
   onMount(async () => {
     try {
       existingEvents = await pb.collection('events').getFullList({ sort: '-created' });
@@ -25,6 +34,7 @@
   function changeStep(targetStep) {
     step = targetStep;
     selectedIndex = 0;
+    showKeyboard = false;
   }
 
   function openNewEventSub() {
@@ -42,7 +52,24 @@
     changeStep(2);
   }
 
+  function handleKeyPress(key) {
+    if (key === ' ') {
+      eventName += ' ';
+    } else {
+      eventName += key;
+    }
+  }
+
+  function handleBackspace() {
+    eventName = eventName.slice(0, -1);
+  }
+
   function handleOk() {
+    if (showKeyboard) {
+      showKeyboard = false;
+      return;
+    }
+
     if (step === 1) {
       if (selectedIndex === 0) openNewEventSub();
       else openExistingEventSub();
@@ -68,13 +95,17 @@
   }
 
   function handleCancel() {
+    if (showKeyboard) {
+      showKeyboard = false;
+      return;
+    }
+
     if (step === 1) {
       window.location.href = '/login';
     } else if (step === 2) {
       changeStep(1);
     } else if (step === 3) {
-      if (subMode === 'NEW') changeStep(2);
-      else changeStep(2);
+      changeStep(2);
     }
   }
 
@@ -122,143 +153,193 @@
   }
 </script>
 
-<div
-  class="relative bg-[#c0c0c0] p-1 border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] w-full max-w-md"
->
+<div class="flex flex-col gap-6 items-center justify-center w-full max-w-xl">
   <div
-    class="border border-b-white border-r-white border-t-black border-l-black p-4 relative pt-6 text-black"
+    class="relative bg-[#c0c0c0] p-1 border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] w-full max-w-md"
   >
     <div
-      class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#c0c0c0] px-2 text-[#a80000] font-bold text-sm whitespace-nowrap"
+      class="border border-b-white border-r-white border-t-black border-l-black p-4 relative pt-6 text-black"
     >
-      ─┤ HB MAX Fotobooth ├─
-    </div>
-
-    {#if loading}
-      <div class="py-4">
-        <p class="text-sm font-bold text-[#a80000] mb-4 animate-pulse uppercase">{statusMessage}</p>
-        <div
-          class="w-full bg-[#c0c0c0] border border-t-black border-l-black border-b-white border-r-white h-6 p-0.5"
-        >
-          <div class="bg-[#a80000] h-full w-2/3 animate-pulse"></div>
-        </div>
+      <div
+        class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#c0c0c0] px-2 text-[#a80000] font-bold text-sm whitespace-nowrap"
+      >
+        ─┤ HB MAX Fotobooth ├─
       </div>
-    {:else}
-      {#if step === 1}
-        <p class="text-sm font-bold mb-4">Selecteer een optie</p>
-      {:else if subMode === 'OPEN' && step === 2}
-        <p class="text-sm font-bold mb-4">Evenement openen</p>
-      {:else if step === 3}
-        <p class="text-sm font-bold mb-4">Selecteer een netwerkmodus</p>
-      {/if}
 
-      <div class="min-h-[140px] flex flex-col justify-center">
-        {#if step === 1}
-          <div class="flex flex-col gap-2 text-sm">
-            <button
-              type="button"
-              class="text-left py-3 px-4 w-full font-bold border border-transparent focus:outline-none transition-none cursor-pointer {selectedIndex ===
-              0
-                ? 'bg-[#a80000] text-white border-red-950'
-                : 'text-black bg-black/5'}"
-              onclick={() => (selectedIndex = 0)}
-            >
-              1 Nieuw evenement toevoegen
-            </button>
-            <button
-              type="button"
-              class="text-left py-3 px-4 w-full font-bold border border-transparent focus:outline-none transition-none cursor-pointer {selectedIndex ===
-              1
-                ? 'bg-[#a80000] text-white border-red-950'
-                : 'text-black bg-black/5'}"
-              onclick={() => (selectedIndex = 1)}
-            >
-              2 Bestaand evenement openen
-            </button>
+      {#if loading}
+        <div class="py-4">
+          <p class="text-sm font-bold text-[#a80000] mb-4 animate-pulse uppercase">
+            {statusMessage}
+          </p>
+          <div
+            class="w-full bg-[#c0c0c0] border border-t-black border-l-black border-b-white border-r-white h-6 p-0.5"
+          >
+            <div class="bg-[#a80000] h-full w-2/3 animate-pulse"></div>
           </div>
-        {:else if step === 2}
-          {#if subMode === 'NEW'}
-            <div class="w-full">
-              <label class="block text-xs font-bold uppercase mb-2" for="ev-name"
-                >Voer een naam in:</label
-              >
-              <input
-                id="ev-name"
-                type="text"
-                bind:value={eventName}
-                placeholder="bijv. Bruiloft Bart en Machthold"
-                class="w-full bg-[#c0c0c0] border border-t-black border-l-black border-b-white border-r-white p-3 font-bold text-sm focus:outline-none text-[#a80000]"
-              />
-            </div>
-          {:else if subMode === 'OPEN'}
-            <div
-              class="flex flex-col gap-1 text-sm max-h-40 overflow-y-auto border border-t-black border-l-black border-b-white border-r-white bg-[#c0c0c0]/50 p-1"
-            >
-              {#if existingEvents.length > 0}
-                {#each existingEvents as ev (ev.id)}
-                  <button
-                    type="button"
-                    class="text-left py-2 px-3 font-bold focus:outline-none flex justify-between text-xs transition-none cursor-pointer {selectedEvent?.id ===
-                    ev.id
-                      ? 'bg-[#a80000] text-white'
-                      : 'text-black bg-black/5'}"
-                    onclick={() => (selectedEvent = ev)}
-                  >
-                    <span>{ev.name}</span>
-                    <span
-                      class="{selectedEvent?.id === ev.id
-                        ? 'text-white/80'
-                        : 'text-black/50'} font-normal"
-                      >{new Date(ev.date).toLocaleDateString('nl-NL')}</span
-                    >
-                  </button>
-                {/each}
-              {:else}
-                <p class="text-xs opacity-50 italic p-4 text-center">
-                  Geen eerdere evenementen gevonden.
-                </p>
-              {/if}
-            </div>
-          {/if}
+        </div>
+      {:else}
+        {#if step === 1}
+          <p class="text-sm font-bold mb-4">Selecteer een optie</p>
+        {:else if subMode === 'OPEN' && step === 2}
+          <p class="text-sm font-bold mb-4">Evenement openen</p>
         {:else if step === 3}
-          <div class="flex flex-col gap-2 text-sm">
-            <div
-              class="bg-[#c0c0c0] border border-t-black border-l-black border-b-white border-r-white p-2 mb-2 text-xs font-bold uppercase text-[#a80000] truncate"
-            >
-              Evenement: {eventName}
-            </div>
-            {#each ['1 Standalone Mode (Pi Hotspot)', '2 External LAN Link (Router)', '3 Cloud Gateway (Venue Wi-Fi)'] as modeLabel, idx (idx)}
+          <p class="text-sm font-bold mb-4">Selecteer een netwerkmodus</p>
+        {/if}
+
+        <div class="min-h-[140px] flex flex-col justify-center">
+          {#if step === 1}
+            <div class="flex flex-col gap-2 text-sm">
               <button
                 type="button"
-                class="text-left py-2.5 px-4 font-bold border border-transparent focus:outline-none transition-none cursor-pointer {selectedIndex ===
-                idx
+                class="text-left py-3 px-4 w-full font-bold border border-transparent focus:outline-none transition-none cursor-pointer {selectedIndex ===
+                0
                   ? 'bg-[#a80000] text-white border-red-950'
                   : 'text-black bg-black/5'}"
-                onclick={() => (selectedIndex = idx)}
+                onclick={() => (selectedIndex = 0)}
               >
-                {modeLabel}
+                1 Nieuw evenement toevoegen
+              </button>
+              <button
+                type="button"
+                class="text-left py-3 px-4 w-full font-bold border border-transparent focus:outline-none transition-none cursor-pointer {selectedIndex ===
+                1
+                  ? 'bg-[#a80000] text-white border-red-950'
+                  : 'text-black bg-black/5'}"
+                onclick={() => (selectedIndex = 1)}
+              >
+                2 Bestaand evenement openen
+              </button>
+            </div>
+          {:else if step === 2}
+            {#if subMode === 'NEW'}
+              <div class="w-full">
+                <label class="block text-xs font-bold uppercase mb-2" for="ev-name"
+                  >Voer een naam in:</label
+                >
+                <input
+                  id="ev-name"
+                  type="text"
+                  bind:value={eventName}
+                  readonly
+                  placeholder="Klik hier om te typen..."
+                  onclick={() => (showKeyboard = true)}
+                  class="w-full bg-[#c0c0c0] border border-t-black border-l-black border-b-white border-r-white p-3 font-bold text-sm focus:outline-none text-[#a80000] cursor-pointer"
+                />
+              </div>
+            {:else if subMode === 'OPEN'}
+              <div
+                class="flex flex-col gap-1 text-sm max-h-40 overflow-y-auto border border-t-black border-l-black border-b-white border-r-white bg-[#c0c0c0]/50 p-1"
+              >
+                {#if existingEvents.length > 0}
+                  {#each existingEvents as ev (ev.id)}
+                    <button
+                      type="button"
+                      class="text-left py-2 px-3 font-bold focus:outline-none flex justify-between text-xs transition-none cursor-pointer {selectedEvent?.id ===
+                      ev.id
+                        ? 'bg-[#a80000] text-white'
+                        : 'text-black bg-black/5'}"
+                      onclick={() => (selectedEvent = ev)}
+                    >
+                      <span>{ev.name}</span>
+                      <span
+                        class="{selectedEvent?.id === ev.id
+                          ? 'text-white/80'
+                          : 'text-black/50'} font-normal"
+                        >{new Date(ev.date).toLocaleDateString('nl-NL')}</span
+                      >
+                    </button>
+                  {/each}
+                {:else}
+                  <p class="text-xs opacity-50 italic p-4 text-center">
+                    Geen eerdere evenementen gevonden.
+                  </p>
+                {/if}
+              </div>
+            {/if}
+          {:else if step === 3}
+            <div class="flex flex-col gap-2 text-sm">
+              <div
+                class="bg-[#c0c0c0] border border-t-black border-l-black border-b-white border-r-white p-2 mb-2 text-xs font-bold uppercase text-[#a80000] truncate"
+              >
+                Evenement: {eventName}
+              </div>
+              {#each ['1 Standalone', '2 LAN (Eigen router)', '3 Cloud (Internet vereist)'] as modeLabel, idx (idx)}
+                <button
+                  type="button"
+                  class="text-left py-2.5 px-4 font-bold border border-transparent focus:outline-none transition-none cursor-pointer {selectedIndex ===
+                  idx
+                    ? 'bg-[#a80000] text-white border-red-950'
+                    : 'text-black bg-black/5'}"
+                  onclick={() => (selectedIndex = idx)}
+                >
+                  {modeLabel}
+                </button>
+              {/each}
+            </div>
+          {/if}
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 pt-4 border-t border-black/10 mt-4">
+          <button
+            type="button"
+            class="py-3 text-center font-black uppercase text-sm bg-[#c0c0c0] border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white cursor-pointer hover:bg-black/5"
+            onclick={handleOk}
+          >
+            &lt;Ok&gt;
+          </button>
+          <button
+            type="button"
+            class="py-3 text-center font-black uppercase text-sm bg-[#c0c0c0] border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white cursor-pointer hover:bg-black/5"
+            onclick={handleCancel}
+          >
+            &lt;Annuleren&gt;
+          </button>
+        </div>
+      {/if}
+    </div>
+  </div>
+
+  {#if showKeyboard && step === 2 && subMode === 'NEW'}
+    <div
+      class="w-full bg-[#c0c0c0] p-3 border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] text-black select-none transition-all"
+    >
+      <div
+        class="border border-b-white border-r-white border-t-black border-l-black p-2 flex flex-col gap-2"
+      >
+        {#each keyboardRows as row (row)}
+          <div class="flex justify-center gap-1 w-full">
+            {#each row as key (key)}
+              <button
+                type="button"
+                onclick={() => handleKeyPress(key)}
+                class="flex-1 py-3 text-center bg-[#c0c0c0] border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black text-xs font-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white active:bg-black/5 cursor-pointer {key ===
+                ' '
+                  ? 'max-w-[40%]'
+                  : ''}"
+              >
+                {key === ' ' ? 'spatie' : key}
               </button>
             {/each}
           </div>
-        {/if}
-      </div>
+        {/each}
 
-      <div class="grid grid-cols-2 gap-4 pt-4 border-t border-black/10 mt-4">
-        <button
-          type="button"
-          class="py-3 text-center font-black uppercase text-sm bg-[#c0c0c0] border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white cursor-pointer hover:bg-black/5"
-          onclick={handleOk}
-        >
-          &lt;Ok&gt;
-        </button>
-        <button
-          type="button"
-          class="py-3 text-center font-black uppercase text-sm bg-[#c0c0c0] border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white cursor-pointer hover:bg-black/5"
-          onclick={handleCancel}
-        >
-          &lt;Annuleren&gt;
-        </button>
+        <div class="flex justify-center gap-1 w-full mt-1">
+          <button
+            type="button"
+            onclick={handleBackspace}
+            class="flex-1 py-3 text-center bg-[#c0c0c0] border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black text-xs font-black text-[#a80000] active:border-t-black active:border-l-black active:border-b-white active:border-r-white cursor-pointer"
+          >
+            [ BACKSPACE ]
+          </button>
+          <button
+            type="button"
+            onclick={() => (showKeyboard = false)}
+            class="flex-1 py-3 text-center bg-[#a80000] border-t-2 border-l-2 border-red-300 border-b-2 border-r-2 border-red-950 text-white text-xs font-black active:border-t-red-950 active:border-l-red-950 active:border-b-red-300 active:border-r-red-300 cursor-pointer"
+          >
+            [ OK ]
+          </button>
+        </div>
       </div>
-    {/if}
-  </div>
+    </div>
+  {/if}
 </div>
