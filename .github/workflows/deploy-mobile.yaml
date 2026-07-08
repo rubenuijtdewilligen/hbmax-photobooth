@@ -1,0 +1,28 @@
+name: Deploy Mobile Upload to CapRover
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "mobile-upload/**"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Tar mobile-upload directory
+        run: |
+          cd mobile-upload
+          tar -cvf ../deploy.tar ./*
+
+      - name: Deploy to CapRover App
+        uses: caprover/deploy-from-github@v1.0.1
+        with:
+          server: "c.rbnu.nl"
+          app: "hbmaxbooth"
+          token: "${{ secrets.APP_TOKEN }}"
