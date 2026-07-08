@@ -234,4 +234,30 @@
       {/if}
     </div>
   {/if}
+
+  <div
+    class="absolute bottom-6 right-6 bg-white border-4 border-black p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-2xl flex flex-col items-center gap-2 text-center z-50 max-w-[190px] rotate-1"
+  >
+    <div
+      class="bg-[#2AC3A6] text-white border-2 border-black px-3 py-0.5 font-black text-[10px] uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -rotate-1 rounded-md"
+    >
+      📱 STUUR FOTO
+    </div>
+
+    <p class="text-[9px] font-black leading-tight uppercase tracking-tight text-neutral-600">
+      Scan met je telefoon en kom live op het scherm!
+    </p>
+
+    <div class="border-4 border-black p-1.5 bg-white rounded-lg shadow-inner">
+      <img
+        src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://hbmaxbooth.c.rbnu.nl&ecc=M&margin=0"
+        alt="Scan!"
+        class="w-28 h-28 select-none pointer-events-none"
+      />
+    </div>
+
+    <span class="text-[7px] text-neutral-400 font-bold tracking-widest uppercase">
+      hbmaxbooth.c.rbnu.nl
+    </span>
+  </div>
 </div>
