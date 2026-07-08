@@ -1,10 +1,12 @@
 <script>
   import { onMount } from 'svelte';
+  import { pb } from '$lib/pocketbase';
 
   let videoElement = $state(null);
   let stream = $state(null);
 
   let isCountingDown = $state(false);
+  let isUploading = $state(false);
   let countdownValue = $state(3);
   let flashActive = $state(false);
   let capturedPhotos = $state([]);
@@ -31,7 +33,7 @@
   });
 
   async function startSession() {
-    if (isCountingDown) return;
+    if (isCountingDown || isUploading) return;
     isCountingDown = true;
     capturedPhotos = [];
 
@@ -43,7 +45,125 @@
     }
 
     isCountingDown = false;
-    console.log('Klaar');
+    isUploading = true;
+
+    try {
+      const activeEvent = await pb.collection('events').getFirstListItem('active = true');
+      if (!activeEvent) throw new Error('Geen actief evenement gevonden.');
+
+      const stripDataUrl = await createStrip(capturedPhotos, activeEvent);
+
+      await uploadToPocketBase(capturedPhotos, stripDataUrl, activeEvent.id);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      isUploading = false;
+    }
+  }
+
+  function createStrip(photos, activeEvent) {
+    return new Promise((resolve) => {
+      const canvas = document.createElement('canvas');
+
+      const targetWidth = 1280;
+      const targetHeight = 853;
+      const padding = 40;
+      const bottomSpace = 300;
+
+      canvas.width = targetWidth + padding * 2;
+      canvas.height = targetHeight * 3 + padding * 4 + bottomSpace;
+
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      let loadedCount = 0;
+
+      photos.forEach((src, index) => {
+        const img = new Image();
+        img.src = src;
+        img.onload = () => {
+          const yOffset = padding + index * (targetHeight + padding);
+
+          const sWidth = img.width;
+          const sHeight = img.height;
+
+          let cropWidth = sWidth;
+          let cropHeight = sWidth * (2 / 3);
+
+          if (cropHeight > sHeight) {
+            cropHeight = sHeight;
+            cropWidth = sHeight * (3 / 2);
+          }
+
+          const sourceX = (sWidth - cropWidth) / 2;
+          const sourceY = (sHeight - cropHeight) / 2;
+
+          ctx.drawImage(
+            img,
+            sourceX,
+            sourceY,
+            cropWidth,
+            cropHeight,
+            padding,
+            yOffset,
+            targetWidth,
+            targetHeight
+          );
+
+          loadedCount++;
+          if (loadedCount === photos.length) {
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 48px monospace';
+            ctx.textAlign = 'center';
+
+            const nameToDisplay =
+              activeEvent && activeEvent.name
+                ? activeEvent.name.toUpperCase()
+                : 'HB MAX PHOTOBOOTH';
+            ctx.fillText(nameToDisplay, canvas.width / 2, canvas.height - 160);
+
+            ctx.font = '32px monospace';
+            ctx.fillStyle = '#666666';
+            const eventDate =
+              activeEvent && activeEvent.date
+                ? new Date(activeEvent.date).toLocaleDateString('nl-NL')
+                : new Date().toLocaleDateString('nl-NL');
+            ctx.fillText(eventDate, canvas.width / 2, canvas.height - 100);
+
+            resolve(canvas.toDataURL('image/jpeg', 0.9));
+          }
+        };
+      });
+    });
+  }
+
+  function dataURLtoFile(dataurl, filename) {
+    let arr = dataurl.split(','),
+      mime = arr[0].match(/:(.*?);/)[1],
+      bstr = atob(arr[1]),
+      n = bstr.length,
+      u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
+  }
+
+  async function uploadToPocketBase(photosArray, stripDataUrl, eventId) {
+    const formData = new FormData();
+    formData.append('event', eventId);
+
+    photosArray.forEach((base64, index) => {
+      const file = dataURLtoFile(base64, `photo-${index + 1}.jpg`);
+      formData.append('photos', file);
+    });
+
+    const stripFile = dataURLtoFile(stripDataUrl, 'print-strip.jpg');
+    formData.append('print_strip', stripFile);
+
+    await pb.collection('sessions').create(formData);
   }
 
   function runCountdown(seconds) {
@@ -156,7 +276,7 @@
   </div>
 
   <div class="w-full flex flex-col items-center justify-center pb-4 z-10">
-    {#if !isCountingDown}
+    {#if !isCountingDown && !isUploading}
       <button
         type="button"
         onclick={startSession}
