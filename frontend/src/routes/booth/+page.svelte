@@ -2,6 +2,8 @@
   import { onMount } from 'svelte';
   import { pb } from '$lib/pocketbase';
 
+  let currentView = $state('CAMERA');
+
   let videoElement = $state(null);
   let stream = $state(null);
 
@@ -11,12 +13,21 @@
   let flashActive = $state(false);
   let capturedPhotos = $state([]);
 
+  let finalStripUrl = $state('');
+
   let showAdminModal = $state(false);
   let adminPin = $state('');
   let adminError = $state('');
   const MASTER_PIN = '2906';
 
   onMount(async () => {
+    await initCamera();
+    return () => {
+      if (stream) stream.getTracks().forEach((track) => track.stop());
+    };
+  });
+
+  async function initCamera() {
     try {
       stream = await navigator.mediaDevices.getUserMedia({
         video: { width: 1280, height: 720, facingMode: 'user' },
@@ -26,16 +37,13 @@
     } catch (err) {
       console.error(err);
     }
-
-    return () => {
-      if (stream) stream.getTracks().forEach((track) => track.stop());
-    };
-  });
+  }
 
   async function startSession() {
     if (isCountingDown || isUploading) return;
     isCountingDown = true;
     capturedPhotos = [];
+    currentView = 'CAMERA';
 
     for (let i = 0; i < 3; i++) {
       await runCountdown(3);
@@ -54,8 +62,12 @@
       const stripDataUrl = await createStrip(capturedPhotos, activeEvent);
 
       await uploadToPocketBase(capturedPhotos, stripDataUrl, activeEvent.id);
+
+      finalStripUrl = stripDataUrl;
+      currentView = 'RESULT';
     } catch (err) {
       console.error(err);
+      alert('Fout bij verwerken of opslaan van de strip.');
     } finally {
       isUploading = false;
     }
@@ -64,7 +76,6 @@
   function createStrip(photos, activeEvent) {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
-
       const targetWidth = 1280;
       const targetHeight = 853;
       const padding = 40;
@@ -74,18 +85,15 @@
       canvas.height = targetHeight * 3 + padding * 4 + bottomSpace;
 
       const ctx = canvas.getContext('2d');
-
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       let loadedCount = 0;
-
       photos.forEach((src, index) => {
         const img = new Image();
         img.src = src;
         img.onload = () => {
           const yOffset = padding + index * (targetHeight + padding);
-
           const sWidth = img.width;
           const sHeight = img.height;
 
@@ -139,18 +147,6 @@
     });
   }
 
-  function dataURLtoFile(dataurl, filename) {
-    let arr = dataurl.split(','),
-      mime = arr[0].match(/:(.*?);/)[1],
-      bstr = atob(arr[1]),
-      n = bstr.length,
-      u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, { type: mime });
-  }
-
   async function uploadToPocketBase(photosArray, stripDataUrl, eventId) {
     const formData = new FormData();
     formData.append('event', eventId);
@@ -163,7 +159,19 @@
     const stripFile = dataURLtoFile(stripDataUrl, 'print-strip.jpg');
     formData.append('print_strip', stripFile);
 
-    await pb.collection('sessions').create(formData);
+    return await pb.collection('sessions').create(formData);
+  }
+
+  function dataURLtoFile(dataurl, filename) {
+    let arr = dataurl.split(','),
+      mime = arr[0].match(/:(.*?);/)[1],
+      bstr = atob(arr[1]),
+      n = bstr.length,
+      u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new File([u8arr], filename, { type: mime });
   }
 
   function runCountdown(seconds) {
@@ -196,6 +204,21 @@
     capturedPhotos = [...capturedPhotos, canvas.toDataURL('image/jpeg', 0.9)];
   }
 
+  function triggerPrint() {
+    // TODO: Connect to printer
+    resetToHome();
+  }
+
+  function resetToHome() {
+    capturedPhotos = [];
+    finalStripUrl = '';
+    currentView = 'CAMERA';
+
+    setTimeout(() => {
+      if (videoElement && stream) videoElement.srcObject = stream;
+    }, 50);
+  }
+
   function checkAdminPin() {
     if (adminPin === MASTER_PIN) {
       showAdminModal = false;
@@ -221,71 +244,117 @@
       adminError = '';
       adminPin = '';
     }}
-    class="text-neutral-300 absolute top-4 right-4 hover:text-neutral-900 text-sm focus:outline-none cursor-pointer transition-colors"
+    class="text-neutral-400 absolute top-4 right-4 hover:text-neutral-900 text-sm focus:outline-none cursor-pointer transition-colors z-50"
   >
     🔒
   </button>
 
-  <div class="relative flex-1 w-full max-w-4xl flex flex-col items-center justify-center my-4 z-10">
+  {#if currentView === 'CAMERA'}
     <div
-      class="bg-[#2AC3A6] text-white border-4 border-black px-6 py-2 font-black text-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -rotate-2 mb-[-20px] z-20 tracking-wide uppercase"
+      class="relative flex-1 w-full max-w-4xl flex flex-col items-center justify-center my-4 z-10"
     >
-      Capture Time!
-    </div>
+      <div
+        class="bg-[#2AC3A6] text-white border-4 border-black px-6 py-2 font-black text-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -rotate-2 mb-[-20px] z-20 tracking-wide uppercase"
+      >
+        Capture Time!
+      </div>
 
-    <div
-      class="w-full aspect-3/2 bg-white border-4 border-black p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative flex flex-col"
-    >
-      <div class="w-full flex-1 bg-neutral-100 border-4 border-[#7BC5E3] overflow-hidden relative">
-        <video
-          bind:this={videoElement}
-          autoplay
-          playsinline
-          class="w-full h-full object-cover scale-x-[-1]"
-        ></video>
+      <div
+        class="w-full max-w-2xl aspect-3/2 bg-white border-4 border-black p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative flex flex-col"
+      >
+        <div class="w-full flex-1 bg-neutral-100 border-4 border-black overflow-hidden relative">
+          <video
+            bind:this={videoElement}
+            autoplay
+            playsinline
+            class="w-full h-full object-cover scale-x-[-1]"
+          ></video>
 
-        <div class="absolute top-3 left-3 flex gap-1.5 z-20">
-          {#each [0, 1, 2] as i (i)}
-            <div
-              class="w-4 h-4 rounded-full border-2 border-black transition-colors duration-200 {capturedPhotos.length >
-              i
-                ? 'bg-[#E94E77]'
-                : 'bg-white'}"
-            ></div>
-          {/each}
-        </div>
-
-        {#if isCountingDown && countdownValue > 0}
-          <div
-            class="absolute inset-0 bg-white/60 flex flex-col items-center justify-center backdrop-blur-xs z-30"
-          >
-            <span
-              class="text-9xl font-black text-neutral-900 drop-shadow-[4px_4px_0px_rgba(255,255,255,1)] animate-scale-up"
-            >
-              {countdownValue}
-            </span>
-            <span
-              class="text-xs uppercase font-black tracking-widest text-white mt-4 bg-[#2AC3A6] border-2 border-black px-3 py-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
-            >
-              Smile! Foto {capturedPhotos.length + 1} van de 3
-            </span>
+          <div class="absolute top-3 left-3 flex gap-1.5 z-20">
+            {#each [0, 1, 2] as i (i)}
+              <div
+                class="w-4 h-4 rounded-full border-2 border-black transition-colors duration-200 {capturedPhotos.length >
+                i
+                  ? 'bg-[#E94E77]'
+                  : 'bg-white'}"
+              ></div>
+            {/each}
           </div>
-        {/if}
+
+          {#if isCountingDown && countdownValue > 0}
+            <div
+              class="absolute inset-0 bg-white/60 flex flex-col items-center justify-center backdrop-blur-xs z-30"
+            >
+              <span
+                class="text-9xl font-black text-neutral-900 drop-shadow-[4px_4px_0px_rgba(255,255,255,1)]"
+              >
+                {countdownValue}
+              </span>
+              <span
+                class="text-xs uppercase font-black tracking-widest text-white mt-4 bg-[#2AC3A6] border-2 border-black px-3 py-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+              >
+                Smile! Foto {capturedPhotos.length + 1} van de 3
+              </span>
+            </div>
+          {/if}
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="w-full flex flex-col items-center justify-center pb-4 z-10">
-    {#if !isCountingDown && !isUploading}
-      <button
-        type="button"
-        onclick={startSession}
-        class="px-10 py-4 bg-[#E94E77] text-white font-black text-lg uppercase tracking-wider rounded-xl border-4 border-black active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer shadow-[5px_5px_0px_0px_rgba(0,0,0,1)]"
+    <div class="w-full flex flex-col items-center justify-center pb-4 z-10">
+      {#if !isCountingDown && !isUploading}
+        <button
+          type="button"
+          onclick={startSession}
+          class="px-12 py-5 bg-[#E94E77] text-white font-black text-xl uppercase tracking-wider rounded-xl border-4 border-black active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+        >
+          Druk hier om te starten!
+        </button>
+      {/if}
+    </div>
+  {:else if currentView === 'RESULT'}
+    <div
+      class="w-full max-w-4xl flex-1 grid grid-cols-1 md:grid-cols-2 gap-8 items-center my-4 z-10 animate-fade-in"
+    >
+      <div class="flex justify-center items-center h-full">
+        <img
+          src={finalStripUrl}
+          alt="Gegenereerde strip"
+          class="w-auto h-max border-2 border-neutral-200 bg-white border-4 border-black p-3 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-h-[75vh]"
+        />
+      </div>
+
+      <div
+        class="flex flex-col gap-5 items-center md:items-start justify-center w-full max-w-xs mx-auto md:mx-0"
       >
-        Druk hier om te starten!
-      </button>
-    {/if}
-  </div>
+        <div
+          class="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-center md:text-left w-full rounded-xl"
+        >
+          <p class="font-black text-md uppercase text-[#2AC3A6] tracking-tight">
+            Ta-Da! Hier zijn je foto's! ✨
+          </p>
+        </div>
+
+        <div class="flex flex-col gap-4 w-full">
+          <button
+            type="button"
+            onclick={triggerPrint}
+            class="w-full py-5 bg-[#2AC3A6] text-white font-black text-lg uppercase tracking-wider rounded-xl border-4 border-black active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] text-center"
+          >
+            🖨️ Print
+          </button>
+
+          <button
+            type="button"
+            onclick={resetToHome}
+            class="w-full py-5 bg-[#E94E77] text-white font-black text-lg uppercase tracking-wider rounded-xl border-4 border-black active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] text-center"
+          >
+            🔄 Opnieuw
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   {#if showAdminModal}
     <div class="absolute inset-0 bg-[#613563] z-50 flex items-center justify-center p-4">
@@ -348,10 +417,8 @@
           <button
             type="button"
             class="w-full py-2 text-center text-xs font-bold bg-[#c0c0c0] border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white focus:outline-none cursor-pointer"
-            onclick={() => (showAdminModal = false)}
+            onclick={() => (showAdminModal = false)}>&lt;Terug naar booth&gt;</button
           >
-            &lt;Terug naar booth&gt;
-          </button>
         </div>
       </div>
     </div>
