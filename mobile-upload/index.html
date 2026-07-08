@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Party Cam</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pocketbase/dist/pocketbase.umd.js"></script>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&display=swap");
+      body {
+        font-family: "Space Mono", monospace;
+      }
+    </style>
+  </head>
+  <body
+    class="min-h-screen bg-[#FDE24F] text-neutral-800 flex flex-col items-center justify-center p-6 text-center select-none"
+  >
+    <div
+      class="w-full max-w-sm bg-white border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center gap-4 rounded-2xl"
+    >
+      <div
+        class="bg-[#2AC3A6] text-white border-2 border-black px-4 py-1 font-black text-sm uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -rotate-1 rounded-md"
+      >
+        📱 Party Cam
+      </div>
+
+      <p
+        id="status-message"
+        class="text-sm font-bold leading-snug my-2 max-w-[80%]"
+      >
+        Je foto komt op het scherm! Lach naar de camera en druk op de knop om je
+        foto te maken.
+      </p>
+
+      <label
+        id="upload-label"
+        class="hidden px-8 py-5 bg-[#E94E77] text-white font-black text-md uppercase tracking-wider rounded-xl border-4 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer text-center w-full"
+      >
+        📸 FOTO MAKEN
+        <input
+          type="file"
+          id="file-input"
+          accept="image/*"
+          capture="user"
+          class="hidden"
+        />
+      </label>
+
+      <div
+        id="loading-bar"
+        class="w-full bg-neutral-100 border-2 border-black h-4 p-0.5 rounded-sm overflow-hidden hidden"
+      >
+        <div class="bg-[#2AC3A6] h-full w-full animate-pulse"></div>
+      </div>
+
+      <span class="text-[9px] text-neutral-400 uppercase mt-4 tracking-widest">
+        Powered by HB MAX Event Solutions<br />
+        (c) Ruben Uijtdewilligen 2026
+      </span>
+    </div>
+
+    <script>
+      const pbCloud = new PocketBase("https://hbmaxbooth-pb.c.rbnu.nl");
+
+      const statusMessageEl = document.getElementById("status-message");
+      const uploadLabelEl = document.getElementById("upload-label");
+      const loadingBarEl = document.getElementById("loading-bar");
+      const fileInputEl = document.getElementById("file-input");
+
+      let activeEvent = null;
+
+      async function init() {
+        try {
+          activeEvent = await pbCloud
+            .collection("events")
+            .getFirstListItem("active = true");
+
+          uploadLabelEl.classList.remove("hidden");
+        } catch (err) {
+          statusMessageEl.textContent =
+            "Er is momenteel geen actief evenement gevonden.";
+        }
+      }
+
+      fileInputEl.addEventListener("change", async (event) => {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+          statusMessageEl.textContent = "❌ Dit is geen geldige afbeelding!";
+          return;
+        }
+
+        uploadLabelEl.classList.add("hidden");
+        loadingBarEl.classList.remove("hidden");
+        statusMessageEl.textContent = "Je foto wordt geupload...";
+
+        try {
+          const formData = new FormData();
+          formData.append("event", activeEvent.id);
+          formData.append("photos", file);
+
+          await pbCloud.collection("sessions").create(formData);
+
+          statusMessageEl.textContent =
+            "✅ Gelukt! Kijk naar het grote scherm! 🎉";
+          loadingBarEl.classList.add("hidden");
+
+          setTimeout(() => {
+            statusMessageEl.textContent =
+              "Lach naar de camera en verschijn op het scherm!";
+            uploadLabelEl.classList.remove("hidden");
+          }, 4000);
+        } catch (err) {
+          console.error(err);
+          statusMessageEl.textContent =
+            "❌ Oeps, upload mislukt. Probeer het opnieuw!";
+          loadingBarEl.classList.add("hidden");
+          uploadLabelEl.classList.remove("hidden");
+        }
+      });
+
+      init();
+    </script>
+  </body>
+</html>
