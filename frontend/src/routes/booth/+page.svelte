@@ -12,6 +12,7 @@
   let countdownValue = $state(3);
   let flashActive = $state(false);
   let capturedPhotos = $state([]);
+  let currentSessionRecord = $state(null);
 
   let finalStripUrl = $state('');
 
@@ -61,7 +62,7 @@
 
       const stripDataUrl = await createStrip(capturedPhotos, activeEvent);
 
-      await uploadToPocketBase(capturedPhotos, stripDataUrl, activeEvent.id);
+      currentSessionRecord = await uploadToPocketBase(capturedPhotos, stripDataUrl, activeEvent.id);
 
       finalStripUrl = stripDataUrl;
       currentView = 'RESULT';
@@ -204,14 +205,27 @@
     capturedPhotos = [...capturedPhotos, canvas.toDataURL('image/jpeg', 0.9)];
   }
 
-  function triggerPrint() {
+  async function triggerPrint() {
     // TODO: Connect to printer
+
+    if (currentSessionRecord) {
+      try {
+        await pb.collection('sessions').update(currentSessionRecord.id, {
+          printed: true
+        });
+        alert('Sessie opgeslagen! Je fotostrip wordt nu afgedrukt... 🖨️');
+      } catch (err) {
+        console.error('Kon print status niet updaten in PocketBase:', err);
+      }
+    }
+
     resetToHome();
   }
 
   function resetToHome() {
     capturedPhotos = [];
     finalStripUrl = '';
+    currentSessionRecord = null;
     currentView = 'CAMERA';
 
     setTimeout(() => {
