@@ -1,8 +1,12 @@
 <script>
   import { onMount } from 'svelte';
   import PocketBase from 'pocketbase';
+  import { browser } from '$app/environment';
 
-  const PI_BACKEND = 'http://localhost:8090';
+  const PI_BACKEND = browser
+    ? `${window.location.protocol}//${window.location.hostname}:8090`
+    : 'http://127.0.0.1:8090';
+
   const CLOUD_BACKEND = 'https://hbmaxbooth-pb.c.rbnu.nl';
 
   let pbPi = new PocketBase(PI_BACKEND);
@@ -181,7 +185,6 @@
     <div
       class="absolute inset-0 bg-black/30 backdrop-blur-xs flex flex-col items-center justify-center z-40 p-4 animate-fade-in w-full h-full"
     >
-      <!-- Zwevende Live Badge -->
       <div
         class="absolute top-6 text-white font-black text-sm px-8 py-3 border-4 border-black uppercase tracking-widest shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-xl z-50
         {imageSourceLabel.includes('PHOTOBOOTH') ? 'bg-[#E94E77]' : 'bg-[#2AC3A6]'}"
