@@ -18,5 +18,8 @@ export default defineConfig({
       // See https://svelte.dev/docs/kit/adapters for more information about adapters.
       adapter: adapter()
     })
-  ]
+  ],
+  preview: {
+    allowedHosts: ['hbmaxfotobooth01.local', 'localhost', '192.168.1.39']
+  }
 });

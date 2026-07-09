@@ -77,73 +77,119 @@
   function createStrip(photos, activeEvent) {
     return new Promise((resolve) => {
       const canvas = document.createElement('canvas');
-      const targetWidth = 1280;
-      const targetHeight = 853;
-      const padding = 40;
-      const bottomSpace = 300;
 
-      canvas.width = targetWidth + padding * 2;
-      canvas.height = targetHeight * 3 + padding * 4 + bottomSpace;
+      canvas.width = 1200;
+      canvas.height = 1800;
 
       const ctx = canvas.getContext('2d');
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       let loadedCount = 0;
-      photos.forEach((src, index) => {
+      const totalToLoad = photos.length + 1;
+
+      const logoImg = new Image();
+      logoImg.src = '/hbmaxlogo.png';
+
+      const imgObjects = photos.map((src) => {
         const img = new Image();
         img.src = src;
-        img.onload = () => {
-          const yOffset = padding + index * (targetHeight + padding);
-          const sWidth = img.width;
-          const sHeight = img.height;
+        return img;
+      });
 
-          let cropWidth = sWidth;
-          let cropHeight = sWidth * (2 / 3);
+      function checkAndRender() {
+        loadedCount++;
+        if (loadedCount === totalToLoad) {
+          const stripWidth = 600;
+          const sidePadding = 55;
+          const topPadding = 50;
 
-          if (cropHeight > sHeight) {
-            cropHeight = sHeight;
-            cropWidth = sHeight * (3 / 2);
-          }
+          const targetWidth = stripWidth - sidePadding * 2;
+          const targetHeight = 327;
+          const gapBetweenPhotos = 45;
 
-          const sourceX = (sWidth - cropWidth) / 2;
-          const sourceY = (sHeight - cropHeight) / 2;
+          for (let col = 0; col < 2; col++) {
+            const xOffset = col * stripWidth;
 
-          ctx.drawImage(
-            img,
-            sourceX,
-            sourceY,
-            cropWidth,
-            cropHeight,
-            padding,
-            yOffset,
-            targetWidth,
-            targetHeight
-          );
+            imgObjects.forEach((loadedImg, imgIdx) => {
+              const yOffset = topPadding + imgIdx * (targetHeight + gapBetweenPhotos);
 
-          loadedCount++;
-          if (loadedCount === photos.length) {
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 48px monospace';
-            ctx.textAlign = 'center';
+              const sWidth = loadedImg.width;
+              const sHeight = loadedImg.height;
+
+              let cropWidth = sWidth;
+              let cropHeight = sWidth * (2 / 3);
+
+              if (cropHeight > sHeight) {
+                cropHeight = sHeight;
+                cropWidth = sHeight * (3 / 2);
+              }
+
+              const sourceX = (sWidth - cropWidth) / 2;
+              const sourceY = (sHeight - cropHeight) / 2;
+
+              ctx.drawImage(
+                loadedImg,
+                sourceX,
+                sourceY,
+                cropWidth,
+                cropHeight,
+                xOffset + sidePadding,
+                yOffset,
+                targetWidth,
+                targetHeight
+              );
+            });
 
             const nameToDisplay =
               activeEvent && activeEvent.name
                 ? activeEvent.name.toUpperCase()
                 : 'HB MAX PHOTOBOOTH';
-            ctx.fillText(nameToDisplay, canvas.width / 2, canvas.height - 160);
 
-            ctx.font = '32px monospace';
+            let fontSize = 54;
+            ctx.font = `bold ${fontSize}px monospace`;
+            ctx.textAlign = 'center';
+
+            const maxTextWidth = 490;
+
+            while (ctx.measureText(nameToDisplay).width > maxTextWidth && fontSize > 20) {
+              fontSize -= 2;
+              ctx.font = `bold ${fontSize}px monospace`;
+            }
+
+            ctx.fillStyle = '#000000';
+            ctx.fillText(nameToDisplay, xOffset + stripWidth / 2, 1320);
+
+            ctx.font = '34px monospace';
             ctx.fillStyle = '#666666';
             const eventDate =
               activeEvent && activeEvent.date
                 ? new Date(activeEvent.date).toLocaleDateString('nl-NL')
                 : new Date().toLocaleDateString('nl-NL');
-            ctx.fillText(eventDate, canvas.width / 2, canvas.height - 100);
 
-            resolve(canvas.toDataURL('image/jpeg', 0.9));
+            ctx.fillText(eventDate, xOffset + stripWidth / 2, 1380);
+
+            const logoTargetWidth = 420;
+            const logoTargetHeight = (logoImg.height / logoImg.width) * logoTargetWidth;
+
+            const logoX = xOffset + (stripWidth - logoTargetWidth) / 2;
+            const logoY = 1490;
+
+            ctx.drawImage(logoImg, logoX, logoY, logoTargetWidth, logoTargetHeight);
           }
-        };
+
+          resolve(canvas.toDataURL('image/jpeg', 0.9));
+        }
+      }
+
+      logoImg.onload = checkAndRender;
+      logoImg.onerror = () => {
+        console.error('Kon het HB MAX logo niet laden.');
+        checkAndRender();
+      };
+
+      imgObjects.forEach((img) => {
+        img.onload = checkAndRender;
       });
     });
   }
@@ -206,16 +252,30 @@
   }
 
   async function triggerPrint() {
-    // TODO: Connect to printer
-
     if (currentSessionRecord) {
       try {
-        await pb.collection('sessions').update(currentSessionRecord.id, {
+        const updatedRecord = await pb.collection('sessions').update(currentSessionRecord.id, {
           printed: true
         });
-        alert('Sessie opgeslagen! Je fotostrip wordt nu afgedrukt... 🖨️');
+
+        const printResponse = await fetch('/api/print', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: currentSessionRecord.id,
+            printStripFilename: updatedRecord.print_strip
+          })
+        });
+
+        const printResult = await printResponse.json();
+
+        if (printResult.success) {
+          console.log('Printopdracht verwerkt:', printResult);
+        } else {
+          console.error('Printer API gaf een fout:', printResult);
+        }
       } catch (err) {
-        console.error('Kon print status niet updaten in PocketBase:', err);
+        console.error('Kon print status of API niet triggeren:', err);
       }
     }
 
