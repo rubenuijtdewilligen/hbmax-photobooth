@@ -391,11 +391,15 @@
       class="w-full max-w-4xl flex-1 grid grid-cols-1 md:grid-cols-2 gap-8 items-center my-4 z-10 animate-fade-in"
     >
       <div class="flex justify-center items-center h-full">
-        <img
-          src={finalStripUrl}
-          alt="Gegenereerde strip"
-          class="w-auto h-max border-2 border-neutral-200 bg-white border-4 border-black p-3 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] max-h-[75vh]"
-        />
+        <div
+          class="max-h-[75vh] aspect-[1/3] overflow-hidden border-4 border-black p-3 bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex justify-start"
+        >
+          <img
+            src={finalStripUrl}
+            alt="Gegenereerde strip"
+            class="h-full max-w-[200%] object-cover object-left"
+          />
+        </div>
       </div>
 
       <div
