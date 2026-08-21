@@ -31,16 +31,14 @@
           sort: '-created'
         });
 
-        historicalSessions = localSessions.map((s) => {
-          return {
-            id: s.id,
-            isCloud: false,
-            urls: s.photos.map((p) => `${PI_BACKEND}/api/files/${s.collectionId}/${s.id}/${p}`)
-          };
-        });
+        historicalSessions = localSessions.map((s) => ({
+          id: s.id,
+          isCloud: false,
+          urls: s.photos.map((p) => `${PI_BACKEND}/api/files/${s.collectionId}/${s.id}/${p}`)
+        }));
       }
     } catch (err) {
-      console.log('Wachten op live geprinte snaps...', err);
+      console.log('Wachten op foto’s...', err);
     }
 
     const slideshowInterval = setInterval(() => {
@@ -57,11 +55,9 @@
             const photoUrls = e.record.photos.map(
               (p) => `${PI_BACKEND}/api/files/${e.record.collectionId}/${e.record.id}/${p}`
             );
-
             const newSessionObj = { id: e.record.id, isCloud: false, urls: photoUrls };
             historicalSessions = [newSessionObj, ...historicalSessions];
-
-            triggerInterrupt(photoUrls, '📸 Live vanuit de PHOTOBOOTH!');
+            triggerInterrupt(photoUrls, '📸 Live vanuit de Fotobooth!');
           }
         }
       });
@@ -73,11 +69,9 @@
       await pbCloud.collection('sessions').subscribe('*', (e) => {
         if (e.action === 'create' && e.record.photos && e.record.photos.length > 0) {
           const selfieUrl = `${CLOUD_BACKEND}/api/files/${e.record.collectionId}/${e.record.id}/${e.record.photos[0]}`;
-
           const newCloudObj = { id: e.record.id, isCloud: true, urls: [selfieUrl] };
           historicalSessions = [newCloudObj, ...historicalSessions];
-
-          triggerInterrupt([selfieUrl], '📱 DANSVLOER SNAP');
+          triggerInterrupt([selfieUrl], '📱 Live Gasten Selfie');
         }
       });
     } catch (err) {
@@ -107,22 +101,22 @@
 </script>
 
 <div
-  class="min-h-screen bg-[#FDE24F] font-mono text-neutral-800 relative flex flex-col items-center justify-center p-4 overflow-hidden select-none"
+  class="min-h-screen bg-[#0B3B3C] font-sans text-white relative flex flex-col items-center justify-center p-4 overflow-hidden select-none"
 >
-  <div
-    class="absolute inset-0 bg-[linear-gradient(to_right,#00000005_1px,transparent_1px),linear-gradient(to_bottom,#00000005_1px,transparent_1px)] bg-[size:40px_40px] z-0"
-  ></div>
+  <div class="absolute top-6 left-6 z-20">
+    <img src="/vf-logo.png" alt="V&F Logo" class="h-24 w-auto drop-shadow-lg" />
+  </div>
 
   {#if !showInterruptOverlay}
     {#if historicalSessions.length > 0}
       {#key backgroundKey}
         <div
-          class="absolute inset-0 flex items-center justify-center p-4 transition-all duration-500 ease-in-out w-full h-full"
+          class="absolute inset-0 flex items-center justify-center p-4 transition-all duration-700 ease-in-out w-full h-full"
         >
           {#if historicalSessions[slideshowIndex].urls.length === 3}
             <div class="relative w-full max-w-5xl h-[90vh] flex items-center justify-center">
               <div
-                class="absolute left-[6%] top-[8%] w-[50%] bg-white border-4 border-black p-3 shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] rounded-2xl aspect-3/2 overflow-hidden -rotate-6 z-10"
+                class="absolute left-[6%] top-[8%] w-[50%] bg-[#08292A] border-4 border-[#D4AF37] p-2 shadow-2xl rounded-2xl aspect-3/2 overflow-hidden -rotate-6 z-10"
               >
                 <img
                   src={historicalSessions[slideshowIndex].urls[0]}
@@ -132,7 +126,7 @@
               </div>
 
               <div
-                class="absolute right-[4%] top-[22%] w-[52%] bg-white border-4 border-black p-3 shadow-[14px_14px_0px_0px_rgba(0,0,0,1)] rounded-2xl aspect-3/2 overflow-hidden rotate-4 z-20"
+                class="absolute right-[4%] top-[22%] w-[52%] bg-[#08292A] border-4 border-[#D4AF37] p-2 shadow-2xl rounded-2xl aspect-3/2 overflow-hidden rotate-4 z-20"
               >
                 <img
                   src={historicalSessions[slideshowIndex].urls[1]}
@@ -142,7 +136,7 @@
               </div>
 
               <div
-                class="absolute left-[14%] bottom-[6%] w-[54%] bg-white border-4 border-black p-3 shadow-[18px_18px_0px_0px_rgba(0,0,0,1)] rounded-2xl aspect-3/2 overflow-hidden -rotate-3 z-30"
+                class="absolute left-[14%] bottom-[6%] w-[54%] bg-[#08292A] border-4 border-[#D4AF37] p-2 shadow-2xl rounded-2xl aspect-3/2 overflow-hidden -rotate-3 z-30"
               >
                 <img
                   src={historicalSessions[slideshowIndex].urls[2]}
@@ -153,7 +147,7 @@
             </div>
           {:else}
             <div
-              class="bg-white border-4 border-black p-4 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] rounded-2xl h-[85vh] aspect-3/2 overflow-hidden rotate-2 flex justify-center items-center"
+              class="bg-[#08292A] border-4 border-[#D4AF37] p-3 shadow-2xl rounded-2xl h-[85vh] aspect-3/2 overflow-hidden rotate-2 flex justify-center items-center"
             >
               <img
                 src={historicalSessions[slideshowIndex].urls[0]}
@@ -166,16 +160,16 @@
       {/key}
     {:else}
       <div
-        class="w-full max-w-md bg-white border-4 border-black p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex flex-col items-center gap-3 rounded-2xl text-center z-10"
+        class="w-full max-w-md bg-[#08292A] border-2 border-[#D4AF37] p-8 shadow-2xl flex flex-col items-center gap-4 rounded-3xl text-center z-10"
       >
         <div
-          class="bg-[#2AC3A6] text-white border-2 border-black px-4 py-1 font-black text-xs uppercase shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+          class="bg-[#E5BA5A] text-[#0B3B3C] px-5 py-1.5 font-black text-xs uppercase tracking-wider rounded-full"
         >
-          READY FOR ACTION 📸
+          📸 V&F Food & Events
         </div>
-        <p class="text-sm font-bold leading-snug">Wacht op de eerste geprinte snaps...</p>
-        <p class="text-[10px] text-neutral-500 uppercase tracking-wide max-w-[90%]">
-          Schiet een strip bij de kist of stuur een live selfie vanaf de dansvloer!
+        <p class="text-base font-bold text-white leading-snug">Wachten op de eerste foto's...</p>
+        <p class="text-xs text-[#E5BA5A]/80 uppercase tracking-wide">
+          Maak een fotostrip bij de booth of stuur direct een selfie via de QR-code!
         </p>
       </div>
     {/if}
@@ -183,11 +177,10 @@
 
   {#if showInterruptOverlay}
     <div
-      class="absolute inset-0 bg-black/30 backdrop-blur-xs flex flex-col items-center justify-center z-40 p-4 animate-fade-in w-full h-full"
+      class="absolute inset-0 bg-black/60 backdrop-blur-md flex flex-col items-center justify-center z-40 p-4 animate-fade-in w-full h-full"
     >
       <div
-        class="absolute top-6 text-white font-black text-sm px-8 py-3 border-4 border-black uppercase tracking-widest shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] rounded-xl z-50
-        {imageSourceLabel.includes('PHOTOBOOTH') ? 'bg-[#E94E77]' : 'bg-[#2AC3A6]'}"
+        class="absolute top-6 bg-[#E5BA5A] text-[#0B3B3C] font-black text-sm px-8 py-2.5 border-2 border-[#D4AF37] uppercase tracking-widest shadow-2xl rounded-full z-50"
       >
         {imageSourceLabel}
       </div>
@@ -195,7 +188,7 @@
       {#if currentImagesToShow.length === 3}
         <div class="relative w-full max-w-6xl h-[92vh] flex items-center justify-center mt-6">
           <div
-            class="absolute left-[4%] top-[10%] w-[51%] bg-white border-4 border-black p-3 shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] rounded-2xl aspect-3/2 overflow-hidden -rotate-8 z-10"
+            class="absolute left-[4%] top-[10%] w-[51%] bg-[#08292A] border-4 border-[#D4AF37] p-2 shadow-2xl rounded-2xl aspect-3/2 overflow-hidden -rotate-8 z-10"
           >
             <img
               src={currentImagesToShow[0]}
@@ -205,7 +198,7 @@
           </div>
 
           <div
-            class="absolute right-[2%] top-[20%] w-[53%] bg-white border-4 border-black p-3 shadow-[16px_16px_0px_0px_rgba(0,0,0,1)] rounded-2xl aspect-3/2 overflow-hidden rotate-5 z-20"
+            class="absolute right-[2%] top-[20%] w-[53%] bg-[#08292A] border-4 border-[#D4AF37] p-2 shadow-2xl rounded-2xl aspect-3/2 overflow-hidden rotate-5 z-20"
           >
             <img
               src={currentImagesToShow[1]}
@@ -215,7 +208,7 @@
           </div>
 
           <div
-            class="absolute left-[16%] bottom-[4%] w-[56%] bg-white border-8 border-black p-4 shadow-[24px_24px_0px_0px_rgba(0,0,0,1)] rounded-2xl aspect-3/2 overflow-hidden -rotate-2 z-30"
+            class="absolute left-[16%] bottom-[4%] w-[56%] bg-[#08292A] border-4 border-[#D4AF37] p-3 shadow-2xl rounded-2xl aspect-3/2 overflow-hidden -rotate-2 z-30"
           >
             <img
               src={currentImagesToShow[2]}
@@ -226,7 +219,7 @@
         </div>
       {:else}
         <div
-          class="bg-white border-8 border-black p-4 shadow-[24px_24px_0px_0px_rgba(0,0,0,1)] rounded-2xl h-[85vh] aspect-3/2 overflow-hidden rotate-1 mt-8 z-30"
+          class="bg-[#08292A] border-4 border-[#D4AF37] p-4 shadow-2xl rounded-2xl h-[85vh] aspect-3/2 overflow-hidden rotate-1 mt-8 z-30"
         >
           <img
             src={currentImagesToShow[0]}
@@ -238,29 +231,26 @@
     </div>
   {/if}
 
+  <!-- QR Code widget -->
   <div
-    class="absolute bottom-6 right-6 bg-white border-4 border-black p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] rounded-2xl flex flex-col items-center gap-2 text-center z-50 max-w-[190px] rotate-1"
+    class="absolute bottom-6 right-6 bg-[#08292A] border-2 border-[#D4AF37] p-4 shadow-2xl rounded-3xl flex flex-col items-center gap-2 text-center z-50 max-w-[190px]"
   >
     <div
-      class="bg-[#2AC3A6] text-white border-2 border-black px-3 py-0.5 font-black text-[10px] uppercase tracking-wider shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] -rotate-1 rounded-md"
+      class="bg-[#E5BA5A] text-[#0B3B3C] px-3 py-0.5 font-black text-[10px] uppercase tracking-wider rounded-full"
     >
       📱 STUUR FOTO
     </div>
 
-    <p class="text-[9px] font-black leading-tight uppercase tracking-tight text-neutral-600">
-      Scan met je telefoon en kom live op het scherm!
+    <p class="text-[9px] font-bold uppercase tracking-tight text-white/80">
+      Scan en verschijn live op het scherm!
     </p>
 
-    <div class="border-4 border-black p-1.5 bg-white rounded-lg shadow-inner">
+    <div class="border-2 border-[#D4AF37] p-1 bg-white rounded-xl shadow-inner">
       <img
         src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=https://hbmaxbooth.c.rbnu.nl&ecc=M&margin=0"
-        alt="Scan!"
-        class="w-28 h-28 select-none pointer-events-none"
+        alt="Scan QR"
+        class="w-24 h-24 select-none pointer-events-none"
       />
     </div>
-
-    <span class="text-[7px] text-neutral-400 font-bold tracking-widest uppercase">
-      hbmaxbooth.c.rbnu.nl
-    </span>
   </div>
 </div>

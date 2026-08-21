@@ -82,14 +82,14 @@
       canvas.height = 1800;
 
       const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#FFFFFF';
+      ctx.fillStyle = '#0B3B3C';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       let loadedCount = 0;
       const totalToLoad = photos.length + 1;
 
       const logoImg = new Image();
-      logoImg.src = '/hbmaxlogo.png';
+      logoImg.src = '/vf-logo.png';
 
       const imgObjects = photos.map((src) => {
         const img = new Image();
@@ -111,6 +111,18 @@
           for (let col = 0; col < 2; col++) {
             const xOffset = col * stripWidth;
 
+            // Scheidingslijn tussen de twee strips
+            if (col === 1) {
+              ctx.strokeStyle = '#D4AF37';
+              ctx.lineWidth = 2;
+              ctx.setLineDash([8, 8]);
+              ctx.beginPath();
+              ctx.moveTo(stripWidth, 0);
+              ctx.lineTo(stripWidth, canvas.height);
+              ctx.stroke();
+              ctx.setLineDash([]);
+            }
+
             imgObjects.forEach((loadedImg, imgIdx) => {
               const yOffset = topPadding + imgIdx * (targetHeight + gapBetweenPhotos);
 
@@ -128,6 +140,15 @@
               const sourceX = (sWidth - cropWidth) / 2;
               const sourceY = (sHeight - cropHeight) / 2;
 
+              // Gouden kader om foto's
+              ctx.fillStyle = '#D4AF37';
+              ctx.fillRect(
+                xOffset + sidePadding - 3,
+                yOffset - 3,
+                targetWidth + 6,
+                targetHeight + 6
+              );
+
               ctx.drawImage(
                 loadedImg,
                 sourceX,
@@ -144,36 +165,35 @@
             const nameToDisplay =
               activeEvent && activeEvent.name
                 ? activeEvent.name.toUpperCase()
-                : 'HB MAX PHOTOBOOTH';
+                : 'V&F FOOD & EVENTS';
 
-            let fontSize = 54;
-            ctx.font = `bold ${fontSize}px monospace`;
+            let fontSize = 46;
+            ctx.font = `bold ${fontSize}px sans-serif`;
             ctx.textAlign = 'center';
 
             const maxTextWidth = 490;
-
             while (ctx.measureText(nameToDisplay).width > maxTextWidth && fontSize > 20) {
               fontSize -= 2;
-              ctx.font = `bold ${fontSize}px monospace`;
+              ctx.font = `bold ${fontSize}px sans-serif`;
             }
 
-            ctx.fillStyle = '#000000';
+            ctx.fillStyle = '#E5BA5A';
             ctx.fillText(nameToDisplay, xOffset + stripWidth / 2, 1320);
 
-            ctx.font = '34px monospace';
-            ctx.fillStyle = '#666666';
+            ctx.font = '28px sans-serif';
+            ctx.fillStyle = '#FFFFFF';
             const eventDate =
               activeEvent && activeEvent.date
                 ? new Date(activeEvent.date).toLocaleDateString('nl-NL')
                 : new Date().toLocaleDateString('nl-NL');
 
-            ctx.fillText(eventDate, xOffset + stripWidth / 2, 1380);
+            ctx.fillText(eventDate, xOffset + stripWidth / 2, 1370);
 
-            const logoTargetWidth = 420;
-            const logoTargetHeight = (logoImg.height / logoImg.width) * logoTargetWidth;
+            const logoTargetWidth = 320;
+            const logoTargetHeight = (logoImg.height / logoImg.width) * logoTargetWidth || 90;
 
             const logoX = xOffset + (stripWidth - logoTargetWidth) / 2;
-            const logoY = 1490;
+            const logoY = 1460;
 
             ctx.drawImage(logoImg, logoX, logoY, logoTargetWidth, logoTargetHeight);
           }
@@ -184,7 +204,7 @@
 
       logoImg.onload = checkAndRender;
       logoImg.onerror = () => {
-        console.error('Kon het HB MAX logo niet laden.');
+        console.error('Kon het logo niet laden.');
         checkAndRender();
       };
 
@@ -268,17 +288,13 @@
         });
 
         const printResult = await printResponse.json();
-
         if (printResult.success) {
           console.log('Printopdracht verwerkt:', printResult);
-        } else {
-          console.error('Printer API gaf een fout:', printResult);
         }
       } catch (err) {
-        console.error('Kon print status of API niet triggeren:', err);
+        console.error('Kon print niet triggeren:', err);
       }
     }
-
     resetToHome();
   }
 
@@ -305,12 +321,18 @@
 </script>
 
 <div
-  class="min-h-screen bg-[#FDE24F] font-mono text-neutral-800 relative flex flex-col items-center justify-between p-6 overflow-hidden select-none"
+  class="min-h-screen bg-[#0B3B3C] font-sans text-white relative flex flex-col items-center justify-between p-6 overflow-hidden select-none"
 >
   {#if flashActive}
     <div class="absolute inset-0 bg-white z-50"></div>
   {/if}
 
+  <!-- Logo linksboven (zwevend, drukt view niet omlaag) -->
+  <div class="absolute top-6 left-6 z-30 pointer-events-none">
+    <img src="/vf-logo.png" alt="V&F Logo" class="h-20 w-auto drop-shadow-md" />
+  </div>
+
+  <!-- Admin slotje rechtsboven (zwevend) -->
   <button
     type="button"
     onclick={() => {
@@ -318,25 +340,25 @@
       adminError = '';
       adminPin = '';
     }}
-    class="text-neutral-400 absolute top-4 right-4 hover:text-neutral-900 text-sm focus:outline-none cursor-pointer transition-colors z-50"
+    class="absolute top-6 right-6 z-30 text-[#E5BA5A]/60 hover:text-[#E5BA5A] text-xl focus:outline-none cursor-pointer transition-colors p-2"
   >
     🔒
   </button>
 
   {#if currentView === 'CAMERA'}
-    <div
-      class="relative flex-1 w-full max-w-4xl flex flex-col items-center justify-center my-4 z-10"
-    >
+    <div class="relative flex-1 w-full max-w-3xl flex flex-col items-center justify-center z-10">
       <div
-        class="bg-[#2AC3A6] text-white border-4 border-black px-6 py-2 font-black text-lg shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] -rotate-2 mb-[-20px] z-20 tracking-wide uppercase"
+        class="bg-[#E5BA5A] text-[#0B3B3C] border-2 border-[#D4AF37] px-8 py-2 font-black text-sm uppercase tracking-widest rounded-full shadow-lg mb-[-16px] z-20"
       >
-        Capture Time!
+        Lach naar de camera
       </div>
 
       <div
-        class="w-full max-w-2xl aspect-3/2 bg-white border-4 border-black p-4 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] relative flex flex-col"
+        class="w-full aspect-3/2 bg-[#08292A] border-4 border-[#D4AF37] p-3 rounded-2xl shadow-2xl relative flex flex-col"
       >
-        <div class="w-full flex-1 bg-neutral-100 border-4 border-black overflow-hidden relative">
+        <div
+          class="w-full flex-1 bg-black/40 rounded-xl border border-[#D4AF37]/30 overflow-hidden relative"
+        >
           <video
             bind:this={videoElement}
             autoplay
@@ -344,30 +366,28 @@
             class="w-full h-full object-cover scale-x-[-1]"
           ></video>
 
-          <div class="absolute top-3 left-3 flex gap-1.5 z-20">
+          <div class="absolute top-4 left-4 flex gap-2 z-20">
             {#each [0, 1, 2] as i (i)}
               <div
-                class="w-4 h-4 rounded-full border-2 border-black transition-colors duration-200 {capturedPhotos.length >
+                class="w-4 h-4 rounded-full border-2 border-[#D4AF37] transition-colors duration-300 {capturedPhotos.length >
                 i
-                  ? 'bg-[#E94E77]'
-                  : 'bg-white'}"
+                  ? 'bg-[#E5BA5A]'
+                  : 'bg-black/40'}"
               ></div>
             {/each}
           </div>
 
           {#if isCountingDown && countdownValue > 0}
             <div
-              class="absolute inset-0 bg-white/60 flex flex-col items-center justify-center backdrop-blur-xs z-30"
+              class="absolute inset-0 bg-[#0B3B3C]/75 flex flex-col items-center justify-center backdrop-blur-xs z-30"
             >
-              <span
-                class="text-9xl font-black text-neutral-900 drop-shadow-[4px_4px_0px_rgba(255,255,255,1)]"
-              >
+              <span class="text-9xl font-black text-[#E5BA5A] drop-shadow-lg animate-scale">
                 {countdownValue}
               </span>
               <span
-                class="text-xs uppercase font-black tracking-widest text-white mt-4 bg-[#2AC3A6] border-2 border-black px-3 py-1 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]"
+                class="text-xs uppercase font-bold tracking-widest text-[#0B3B3C] mt-4 bg-[#E5BA5A] px-4 py-1.5 rounded-full shadow-md"
               >
-                Smile! Foto {capturedPhotos.length + 1} van de 3
+                Foto {capturedPhotos.length + 1} van de 3
               </span>
             </div>
           {/if}
@@ -375,29 +395,27 @@
       </div>
     </div>
 
-    <div class="w-full flex flex-col items-center justify-center pb-4 z-10">
+    <div class="w-full flex flex-col items-center justify-center pb-2 z-10">
       {#if !isCountingDown && !isUploading}
         <button
           type="button"
           onclick={startSession}
-          class="px-12 py-5 bg-[#E94E77] text-white font-black text-xl uppercase tracking-wider rounded-xl border-4 border-black active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer shadow-[6px_6px_0px_0px_rgba(0,0,0,1)]"
+          class="px-12 py-5 bg-[#E5BA5A] hover:bg-[#d8ae4f] text-[#0B3B3C] font-black text-xl uppercase tracking-widest rounded-2xl border-2 border-[#D4AF37] active:scale-95 transition-all cursor-pointer shadow-xl"
         >
-          Druk hier om te starten!
+          📸 START FOTOSHOOT
         </button>
       {/if}
     </div>
   {:else if currentView === 'RESULT'}
-    <div
-      class="w-full max-w-4xl flex-1 grid grid-cols-1 md:grid-cols-2 gap-8 items-center my-4 z-10 animate-fade-in"
-    >
+    <div class="w-full max-w-4xl flex-1 grid grid-cols-1 md:grid-cols-2 gap-8 items-center z-10">
       <div class="flex justify-center items-center h-full">
         <div
-          class="max-h-[75vh] aspect-[1/3] overflow-hidden border-4 border-black p-3 bg-white shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] flex justify-start"
+          class="max-h-[75vh] aspect-[1/3] overflow-hidden border-4 border-[#D4AF37] p-2 bg-[#0B3B3C] shadow-2xl rounded-xl flex justify-start"
         >
           <img
             src={finalStripUrl}
             alt="Gegenereerde strip"
-            class="h-full max-w-[200%] object-cover object-left"
+            class="h-full max-w-[200%] object-cover object-left rounded-lg"
           />
         </div>
       </div>
@@ -406,28 +424,29 @@
         class="flex flex-col gap-5 items-center md:items-start justify-center w-full max-w-xs mx-auto md:mx-0"
       >
         <div
-          class="bg-white border-4 border-black p-4 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-center md:text-left w-full rounded-xl"
+          class="bg-[#08292A] border-2 border-[#D4AF37] p-4 text-center md:text-left w-full rounded-2xl shadow-lg"
         >
-          <p class="font-black text-md uppercase text-[#2AC3A6] tracking-tight">
-            Ta-Da! Hier zijn je foto's! ✨
+          <p class="font-black text-lg text-[#E5BA5A] uppercase tracking-wide">
+            Prachtig gelukt! ✨
           </p>
+          <p class="text-xs text-white/80 mt-1">Druk op print om je fotostrip mee te nemen.</p>
         </div>
 
         <div class="flex flex-col gap-4 w-full">
           <button
             type="button"
             onclick={triggerPrint}
-            class="w-full py-5 bg-[#2AC3A6] text-white font-black text-lg uppercase tracking-wider rounded-xl border-4 border-black active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] text-center"
+            class="w-full py-4 bg-[#E5BA5A] hover:bg-[#d8ae4f] text-[#0B3B3C] font-black text-lg uppercase tracking-wider rounded-xl border-2 border-[#D4AF37] active:scale-95 transition-all cursor-pointer shadow-lg text-center"
           >
-            🖨️ Print
+            🖨️ PRINT STRIP
           </button>
 
           <button
             type="button"
             onclick={resetToHome}
-            class="w-full py-5 bg-[#E94E77] text-white font-black text-lg uppercase tracking-wider rounded-xl border-4 border-black active:translate-x-1 active:translate-y-1 active:shadow-none transition-all cursor-pointer shadow-[5px_5px_0px_0px_rgba(0,0,0,1)] text-center"
+            class="w-full py-4 bg-[#08292A] hover:bg-[#062021] text-[#E5BA5A] font-black text-lg uppercase tracking-wider rounded-xl border-2 border-[#D4AF37]/50 active:scale-95 transition-all cursor-pointer shadow-lg text-center"
           >
-            🔄 Opnieuw
+            🔄 OPNIEUW
           </button>
         </div>
       </div>
@@ -435,69 +454,68 @@
   {/if}
 
   {#if showAdminModal}
-    <div class="absolute inset-0 bg-[#613563] z-50 flex items-center justify-center p-4">
+    <div
+      class="absolute inset-0 bg-[#0B3B3C]/95 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
+    >
       <div
-        class="relative bg-[#c0c0c0] p-1 border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] w-full max-w-xs text-black font-mono"
+        class="bg-[#08292A] border-2 border-[#D4AF37] p-6 rounded-2xl shadow-2xl w-full max-w-xs text-white"
       >
+        <h3 class="text-center font-bold text-sm uppercase tracking-wider text-[#E5BA5A] mb-4">
+          Admin Toegang
+        </h3>
+
         <div
-          class="border border-b-white border-r-white border-t-black border-l-black p-4 relative pt-6"
+          class="bg-[#0B3B3C] border border-[#D4AF37] p-2 text-center h-12 flex items-center justify-center text-lg font-bold tracking-widest text-[#E5BA5A] rounded-xl mb-4"
         >
-          <div
-            class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#c0c0c0] px-2 text-[#a80000] font-bold text-xs whitespace-nowrap"
-          >
-            ─┤ HB MAX Fotobooth ├─
-          </div>
-          <p class="text-xs font-bold mb-3">Voer de admin PIN in</p>
-          <div
-            class="bg-[#c0c0c0] border border-t-black border-l-black border-b-white border-r-white p-2 text-center h-10 flex items-center justify-center text-md font-bold tracking-widest text-[#a80000] mb-3"
-          >
-            {#if adminPin.length === 0}
-              <span class="opacity-20 text-black text-xs font-normal uppercase">[ PIN ]</span>
-            {:else}
-              {adminPin.replace(/./g, '*')}
-            {/if}
-          </div>
-          {#if adminError}
-            <p class="text-[#a80000] text-[10px] font-bold text-center mb-2 uppercase">
-              {adminError}
-            </p>
-          {/if}
-          <div class="grid grid-cols-3 gap-1.5 mb-4">
-            {#each [1, 2, 3, 4, 5, 6, 7, 8, 9] as num (num)}
-              <button
-                type="button"
-                class="bg-[#c0c0c0] border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black font-bold py-1.5 text-sm active:border-t-black active:border-l-black active:border-b-white active:border-r-white focus:outline-none"
-                onclick={() => {
-                  adminError = '';
-                  if (adminPin.length < 4) adminPin += num;
-                }}>{num}</button
-              >
-            {/each}
-            <button
-              type="button"
-              class="bg-[#c0c0c0] border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black text-[#a80000] font-bold py-1.5 text-xs focus:outline-none"
-              onclick={() => (adminPin = '')}>CLEAR</button
+          {#if adminPin.length === 0}
+            <span class="text-white/30 text-xs font-normal uppercase tracking-normal"
+              >[ PIN CODE ]</span
             >
+          {:else}
+            {adminPin.replace(/./g, '●')}
+          {/if}
+        </div>
+
+        {#if adminError}
+          <p class="text-red-400 text-xs font-bold text-center mb-2">{adminError}</p>
+        {/if}
+
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          {#each [1, 2, 3, 4, 5, 6, 7, 8, 9] as num (num)}
             <button
               type="button"
-              class="bg-[#c0c0c0] border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black font-bold py-1.5 text-sm focus:outline-none"
+              class="bg-[#0B3B3C] border border-[#D4AF37]/40 hover:border-[#D4AF37] font-bold py-2 text-base rounded-xl active:bg-[#E5BA5A] active:text-[#0B3B3C] transition-colors"
               onclick={() => {
                 adminError = '';
-                if (adminPin.length < 4) adminPin += 0;
-              }}>0</button
+                if (adminPin.length < 4) adminPin += num;
+              }}>{num}</button
             >
-            <button
-              type="button"
-              class="bg-[#a80000] border-t-2 border-l-2 border-red-300 border-b-2 border-r-2 border-red-950 text-white font-bold py-1.5 text-xs focus:outline-none"
-              onclick={checkAdminPin}>ENTER</button
-            >
-          </div>
+          {/each}
           <button
             type="button"
-            class="w-full py-2 text-center text-xs font-bold bg-[#c0c0c0] border-t-2 border-l-2 border-white border-b-2 border-r-2 border-black active:border-t-black active:border-l-black active:border-b-white active:border-r-white focus:outline-none cursor-pointer"
-            onclick={() => (showAdminModal = false)}>&lt;Terug naar booth&gt;</button
+            class="bg-[#0B3B3C] border border-red-400/50 text-red-400 font-bold py-2 text-xs rounded-xl"
+            onclick={() => (adminPin = '')}>CLEAR</button
+          >
+          <button
+            type="button"
+            class="bg-[#0B3B3C] border border-[#D4AF37]/40 font-bold py-2 text-base rounded-xl"
+            onclick={() => {
+              adminError = '';
+              if (adminPin.length < 4) adminPin += 0;
+            }}>0</button
+          >
+          <button
+            type="button"
+            class="bg-[#E5BA5A] text-[#0B3B3C] font-bold py-2 text-xs rounded-xl"
+            onclick={checkAdminPin}>ENTER</button
           >
         </div>
+
+        <button
+          type="button"
+          class="w-full py-2 text-center text-xs font-bold text-[#E5BA5A]/70 hover:text-[#E5BA5A]"
+          onclick={() => (showAdminModal = false)}>Sluiten</button
+        >
       </div>
     </div>
   {/if}
